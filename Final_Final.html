@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Visualization of Worldwide Unemployment Rate</title>
+	<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+	<link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+	<script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+	<!-- 引入CSS文件 -->
+	<link href='Mapbox_styles.css' rel='stylesheet' />
+	<!--Load the chart libraries. Dimple is built on D3, and you need to also add D3-->
+	<script charset="utf-8" src="https://d3js.org/d3.v4.min.js"></script>
+	<script charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/dimple/2.3.0/dimple.latest.min.js"></script>
+
+
+
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+		}
+
+		#map {
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			width: 100%;
+		}
+
+		.hidden-layer {
+			position: absolute;
+			left: 0;
+			bottom: -10px;
+			display: none;
+			background-color: #f9f9f9;
+			border: 1px solid #ddd;
+			padding: 10px;
+			margin-top: 10px;
+		}
+
+		#toggleButton {
+			position: fixed;
+			/* 使用fixed，按钮会相对于视口固定位置 */
+			top: 130px;
+			/* 距离顶部20px */
+			left: 10px;
+			/* 距离右边20px */
+			width: 200px;
+			/* 按钮宽度100px */
+			height: 50px;
+			/* 按钮高度50px */
+			background-color: #4CAF50;
+			/* 按钮背景色 */
+			color: white;
+			/* 按钮文字颜色 */
+			border: none;
+			/* 无边框 */
+			text-align: center;
+			/* 文字居中 */
+			line-height: 50px;
+			/* 行高与按钮高度一致，使文字垂直居中 */
+			border-radius: 5px;
+			/* 边角圆滑度 */
+			font-size: 16px;
+			/* 文字大小 */
+			cursor: pointer
+				/* 鼠标悬停时显示指针手型图标 */
+		}
+
+		#chartContainer {
+			position: absolute;
+			left: 0;
+			bottom: 100px;
+			z-index: 10;
+			/* 确保 chartContainer 显示在地图上方 */
+			width: 700px;
+			/* 或者您想要的任何宽度 */
+			margin: 10px;
+			background: white;
+			/* 或任何您希望的背景颜色 */
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+			/* 可选的，为容器添加阴影效果 */
+			/* 更多的样式可以添加，如内边距、边框等 */
+			text-indent: 1em;
+		}
+
+		/* Chart style */
+		/* #chartContainer {width: 840px; margin: auto; margin-top: 50px; }
+        #chartContainer p {margin-left: 60px; margin-bottom: 5px; margin-top: 0; padding: 0;}
+        #charttitle {font: bold 22px  Verdana, sans-serif;} */
+
+		#png {
+			position: absolute;
+			left: 0px;
+			bottom: 0px;
+			margin: 0px;
+			background: white;
+			transform: scale(0.10);
+			transform-origin: left bottom;
+			left: 10px;
+		}
+	</style>
+
+
+</head>
+
+
+
+<body>
+	<div id="map"></div>
+	<!-- class='map-overlay top' 指定了该容器的类名为 map-overlay，并且添加了 top 类。这些类用于指定样式和定位。 -->
+	<div class='map-overlay top'>
+		<!-- 内嵌的 <div> 元素，用于创建容器的内部内容。 -->
+		<div class='map-overlay-inner'>
+			<h2>Worldwide Unempolyment Rate</h2>
+			<table>
+				<tr>
+					<td>
+						<!-- <input> 元素，创建了一个滑动条输入框。 -->
+						<input id='slider' type='range' min='0' max='25' step='1' value='0' list='tickmarks' />
+						<datalist id="tickmarks">
+							<option value="0" label="2000">
+							<option value="1">
+							<option value="2">
+							<option value="3">
+							<option value="4">
+							<option value="5" label="2005">
+							<option value="6">
+							<option value="7">
+							<option value="8">
+							<option value="9">
+							<option value="10" label="2010">
+							<option value="11">
+							<option value="12">
+							<option value="13">
+							<option value="14">
+							<option value="15" label="2015">
+							<option value="16">
+							<option value="17">
+							<option value="18">
+							<option value="19">
+							<option value="20" label="2020">
+							<option value="21">
+							<option value="22">
+							<option value="23">
+							<option value="24">
+							<option value="25" label="2025">
+						</datalist>
+					</td>
+					<td>
+						<label id='year'>2000</label>
+					</td>
+				</tr>
+			</table>
+			<p class="credit">Passenger data: <a href="https://ilostat.ilo.org/data/">ILOSTAT</a>.
+				Line and Station data: <a href="https://github.com/EthanLi1922/CASA0003_Data_Viz">Yicong(Ethan) Li</a>
+			</p>
+		</div>
+	</div>
+
+	<!--This is the div container for the chart-->
+
+	<button id="toggleButton">Show Line Charts</button>
+	<div class="hidden-layer" id="layerToToggle">
+
+		<div id="chartContainer">
+
+			<h4 id="charttitle">Chart title is here</h4>
+			<p id="chartsubhead">Worldwide Unemployment Rate (15-24 year-old)</p>
+			<p><select id="CountryMenu">
+					<option>Select the Country Here:</option>
+				</select></p> <!-- This is the drop down menu to select different cities-->
+
+		</div>
+
+	</div>
+
+	<div id="png">
+		<img src="colorbar_test.png" alt="Rdbu_r colorbar">
+	</div>
+
+
+
+
+
+	<script>
+		// Add accessToken
+		mapboxgl.accessToken = 'pk.eyJ1IjoibHljMTk5OTExMTEiLCJhIjoiY2t0bjMzN2xkMmMwMzJ2cWZueXZzZHN0ZSJ9.BQGI-sCp3fhGZSD8NTeFtw';  //Put your mapbox access token here
+
+		// Load a new map in the 'map' HTML div
+		var map = new mapboxgl.Map({
+			container: 'map', // container id
+			style: 'mapbox://styles/lyc19991111/cltaoiowe00g501qn2m2ifij6', // Put your mapbox style ID here
+			center: [-0.1, 51.5], // starting position [lng, lat]
+			zoom: 1 // starting zoom
+		});
+
+		// Create an array of the available data years
+		var years = [
+			'2000', '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008', '2009',
+			'2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019',
+			'2020', '2021', '2022', '2023', '2024', '2025',
+		];
+
+
+
+		map.on('load', function () {
+
+			// 在这里定义 fillColorExpression，以确保在 map.addLayer 调用时它是可用的
+			// 最先定义的部分，预设而已
+			var fillColorExpression = [
+				'interpolate',
+				['linear'],
+				['get', 'WUR2000'], // 这是一个初始属性，稍后会在 setYear 函数中动态更新
+				0, '#053061',
+				2, '#053061',
+				4, '#2065ab',
+				6, '#4393c3',
+				8, '#90c4dd',
+				10, '#d1e5f0',
+				12, '#f7f6f6',
+				14, '#f9ede5',
+				16, '#fbe3d4',
+				18, '#fcd7c2',
+				20, '#f9c4a9',
+				24, '#f09c7b',
+				28, '#da6853',
+				32, '#c13639',
+				36, '#9c1127',
+				40, '#67001f',
+				10000, '#c7c7c7'
+			];
+
+
+
+			// 使用 map.getStyle().layers 检查图层的顺序
+			var layers = map.getStyle().layers;
+			var layerId;
+			for (var i = 0; i < layers.length; i++) {
+				if (layers[i].id === 'FINAL_DATASET') {
+					layerId = layers[i].id;
+					break;
+				}
+			}
+
+			// 在 'FINAL_DATASET' 图层下面添加您的新图层 'WUR_display'
+			map.addLayer({
+				id: 'WUR_display',
+				type: 'fill',
+				source: {
+					type: 'vector',
+					url: 'mapbox://lyc19991111.5flmdelq'
+				},
+				'source-layer': 'Final_01-2qxwjk',
+				'layout': {
+					'visibility': 'visible'
+				},
+				'paint': {
+					'fill-color': fillColorExpression,
+					'fill-opacity': 1
+				}
+			}, layerId); // 指定在 'FINAL_DATASET' 下面添加图层
+
+
+
+			var dataProperty
+			var year
+
+			function setYear(yearIndex) {
+				// 获取年份值
+				year = years[yearIndex];
+				document.getElementById('year').textContent = year; // 更新年份显示
+
+				// 根据当前年份构建数据属性名
+				dataProperty = 'WUR' + year;
+
+				// 构建 fillColorExpression 用于动态更新 'fill-color' 样式
+				var fillColorExpression = [
+					'interpolate',
+					['linear'],
+					['get', dataProperty], // 使用动态属性名
+					// ...颜色插值
+					// ...省略其他颜色值，以简化示例
+					0, '#053061',
+					2, '#053061',
+					4, '#2065ab',
+					6, '#4393c3',
+					8, '#90c4dd',
+					10, '#d1e5f0',
+					12, '#f7f6f6',
+					14, '#f9ede5',
+					16, '#fbe3d4',
+					18, '#fcd7c2',
+					20, '#f9c4a9',
+					24, '#f09c7b',
+					28, '#da6853',
+					32, '#c13639',
+					36, '#9c1127',
+					40, '#67001f',
+					10000, '#c7c7c7'
+				];
+
+				// ...更新 fillColorExpression 的代码
+				map.setPaintProperty('WUR_display', 'fill-color', fillColorExpression);
+
+			}
+
+
+
+
+
+			// 添加滑动条的事件监听器
+			document.getElementById('slider').addEventListener('input', function (e) {
+				var yearIndex = parseInt(e.target.value); // 滑动条提供年份的索引
+				setYear(yearIndex); // 调用 setYear 并传递年份的索引
+			});
+
+
+
+			var currentYear = '2000'; // 初始化年份
+			var dataProperty = 'WUR' + currentYear; // 初始化dataProperty
+
+			// 当用户改变年份时，这个函数需要被调用来更新dataProperty
+			function updateDataProperty(year) {
+				currentYear = year; // 更新当前年份
+				dataProperty = 'WUR' + year; // 根据当前年份更新属性名称
+			}
+
+			var mypopup = new mapboxgl.Popup({ offset: [150, 50], closeButton: false });
+			// Another event listener that adds the popup when the user puts their cursor over the tube circles
+			// /另一个事件监听器，当用户将光标放在管圈上时添加弹出窗口
+			// 当鼠标放在圆圈上时弹出一个信息框
+			
+			map.on('mouseover', 'WUR_display', function (e) {
+				var checknumber = e.features[0].properties[dataProperty];
+				var contentHTML;
+
+				    if (checknumber === 10000) {
+					// 如果数据属性为10000，设置内容为数据不可用
+					contentHTML = "<h3>" + e.features[0].properties.country + "</h3>Data is unavailable";
+				} else {
+					// 否则，显示实际的失业率
+					contentHTML = "<h3>" + e.features[0].properties.country + "</h3>Unemployment Rate: " + checknumber + "%";
+				}
+
+				mypopup
+					.setLngLat(e.lngLat)
+					.setHTML(contentHTML)
+					.addTo(map);
+			});
+
+			// Change the cursor to a pointer when the mouse is over the stations layer.
+			// 当鼠标位于“站点层”('TubeEntryExit2')上时，将光标更改为指针。
+			map.on('mouseenter', 'WUR_display', function () {
+				map.getCanvas().style.cursor = 'pointer';
+			});
+
+			// Change it back to a pointer when it leaves and remove the popup window.
+			// 当它离开并移除弹出窗口时，将其更改为指针。
+			// 就是说，当鼠标从圆圈上移走时，弹出的框消失
+			map.on('mouseleave', 'WUR_display', function () {
+				map.getCanvas().style.cursor = '';
+				mypopup.remove();
+			});
+
+
+
+		});
+
+
+
+		//This statement loads the data from the CSV file, and then runs the function after the CSV is loaded. CityData is an array that contains the CSV data
+
+		d3.csv("csv_final.csv", function (CountryData) {
+
+			var chartdata;
+
+			var countryMenu = document.getElementById("CountryMenu");
+
+			// 这是一个循环，遍历CountryData数组中的每一个元素。
+			// CountryData数组包含了从CSV文件中读取的数据，每个元素都是一个对象，代表CSV文件中的一行。
+			for (var i = 0; i < CountryData.length; i++) {            // In this loop we add the names of all the Cities in the CSV to the drop down menu
+				var el = document.createElement("option");
+				el.textContent = CountryData[i].country;
+				el.value = CountryData[i].Index;
+				countryMenu.appendChild(el);
+			}
+
+			// 这是一个函数定义，SetCountryData接收一个参数index，这个index预期是一个整数，用于指定CountryData数组中的特定元素。
+			function SetCountryData(index) {   // Function that extracts the population timeseries for the selected city
+
+				// 这只是控制台，暂时无关
+				console.log(CountryData[index]); // Show the data of the row in the console
+
+				document.getElementById("charttitle").innerHTML = CountryData[index].country; // The name of the country is inserted into the chart title
+
+				// Dimple requires each data point on a time series to be a separate row. Below we insert the population data from the CityData array into a new array of JSON objects in the required format
+				chartdata = [
+					{ "Country": "Hist", "Year": "2000", "WUR": (CountryData[index].WUR2000) },
+					{ "Country": "Hist", "Year": "2001", "WUR": (CountryData[index].WUR2001) },
+					{ "Country": "Hist", "Year": "2002", "WUR": (CountryData[index].WUR2002) },
+					{ "Country": "Hist", "Year": "2003", "WUR": (CountryData[index].WUR2003) },
+					{ "Country": "Hist", "Year": "2004", "WUR": (CountryData[index].WUR2004) },
+					{ "Country": "Hist", "Year": "2005", "WUR": (CountryData[index].WUR2005) },
+					{ "Country": "Hist", "Year": "2006", "WUR": (CountryData[index].WUR2006) },
+					{ "Country": "Hist", "Year": "2007", "WUR": (CountryData[index].WUR2007) },
+					{ "Country": "Hist", "Year": "2008", "WUR": (CountryData[index].WUR2008) },
+					{ "Country": "Hist", "Year": "2009", "WUR": (CountryData[index].WUR2009) },
+					{ "Country": "Hist", "Year": "2010", "WUR": (CountryData[index].WUR2010) },
+					{ "Country": "Hist", "Year": "2011", "WUR": (CountryData[index].WUR2011) },
+					{ "Country": "Hist", "Year": "2012", "WUR": (CountryData[index].WUR2012) },
+					{ "Country": "Hist", "Year": "2013", "WUR": (CountryData[index].WUR2013) },
+					{ "Country": "Hist", "Year": "2014", "WUR": (CountryData[index].WUR2014) },
+					{ "Country": "Hist", "Year": "2015", "WUR": (CountryData[index].WUR2015) },
+					{ "Country": "Hist", "Year": "2016", "WUR": (CountryData[index].WUR2016) },
+					{ "Country": "Hist", "Year": "2017", "WUR": (CountryData[index].WUR2017) },
+					{ "Country": "Hist", "Year": "2018", "WUR": (CountryData[index].WUR2018) },
+					{ "Country": "Hist", "Year": "2019", "WUR": (CountryData[index].WUR2019) },
+					{ "Country": "Hist", "Year": "2020", "WUR": (CountryData[index].WUR2020) },
+					{ "Country": "Hist", "Year": "2021", "WUR": (CountryData[index].WUR2021) },
+					{ "Country": "Hist", "Year": "2022", "WUR": (CountryData[index].WUR2022) },
+					{ "Country": "Proj", "Year": "2022", "WUR": (CountryData[index].WUR2022) },
+					{ "Country": "Proj", "Year": "2023", "WUR": (CountryData[index].WUR2023) },
+					{ "Country": "Proj", "Year": "2024", "WUR": (CountryData[index].WUR2024) },
+					{ "Country": "Proj", "Year": "2025", "WUR": (CountryData[index].WUR2025) },
+
+					// ??? 目前理解为Country是键值对中的键
+				];
+			}
+
+			// 设置一个初始值
+			SetCountryData(0);
+
+
+
+			// 创建一个SVG元素并附加到页面上id为'chartContainer'的元素内。
+			// 设置这个SVG的宽度为840像素，高度为440像素。
+			var svg = dimple.newSvg("#chartContainer", 800, 300); // The chart is an svg variable assigned to the chartcontainer div. It's width and height are also assigned here
+
+			// 使用之前定义的svg变量和chartdata数据创建一个新的dimple图表实例。
+			var myChart = new dimple.chart(svg, chartdata);  // Create the chart
+			// 设置图表的边界。这个设置定义了图表内容在svg元素内的具体位置和大小。
+			myChart.setBounds(60, 15, 580, 200);            // Set the chart bounds within the svg container
+
+			// 设置图表的默认颜色。这里定义了一个颜色数组，每个系列将使用数组中的颜色。
+			// 在这个例子中，所有的线都将被设置成颜色代码为#54aae3的蓝色。
+			myChart.defaultColors = [
+				new dimple.color("#54aae3"),
+				new dimple.color("#54aae3")
+			];
+
+			// 添加一个时间轴（x轴），并设置其类型为时间。
+			// "Year"指定了数据集中用于时间轴的列名。
+			// 第三个参数 "%Y" 指定了数据中时间的格式，这里表示只有年份。
+			// 第四个参数也是 "%Y"，这是时间轴标签的显示格式。
+			var x = myChart.addTimeAxis("x", "Year", "%Y", "%Y");  // Define the x axis. The latter statements define the date format which we want to be year only
+			// 设置时间轴的间隔。这里设置为每1年显示一次标记。
+			x.timeInterval = 1;
+
+			// 添加一个测量轴（y轴），并设置其标题为"Unemployment Rate"。
+			// "Unemployment Rate"指定了数据集中用于测量轴的列名。
+			var y = myChart.addMeasureAxis("y", "WUR"); // Define the y axis
+			// 设置y轴的刻度数。这里设置为6，意味着y轴将被分成6个刻度区间。
+			y.overrideMin = 0;   // 设置y轴的最小值
+			y.overrideMax = 50;  // 设置y轴的最大值
+			y.tickFormat = ",.2f";  // 设置y轴刻度的格式，例如这里保留一位小数
+			y.ticks = 10;
+			y.title = "Unemployment Rate (%)";  // 设置y轴的标题
+
+			// 添加一个系列，指定用"Country"列作为系列分类，并设置图表类型为线形图。
+			// 这意味着图表将展示不同国家的数据作为不同的线。
+			var s = myChart.addSeries("Country", dimple.plot.line);
+			s.lineMarkers = true;
+			//s.interpolation = "cardinal";
+
+			myChart.draw(500); // Draw the chart. The number is the animation delay in miliseconds
+
+			// 将预测数据线（path.dimple - proj）设置为虚线
+			svg.selectAll("path.dimple-proj").style("stroke-dasharray", "2"); // Some minor stying changes using the svg selectAll statement. Make the projected data a dashed line and the grid colour lighter.
+			// 坐标轴（path.domain）和刻度线（g.tick line）颜色设置为浅灰色。
+			svg.selectAll("path.domain").style("stroke", "#CCC");
+			svg.selectAll("g.tick line").style("stroke", "#CCC");
+
+			// 绘制图表后调整 x 轴标题位置
+			svg.selectAll('g.x.axis text.axis-title')
+				.attr('y', 100) // 将标题向下移动（y轴正方向）
+				.attr('x', 10) // 将标题向右移动（x轴正方向）
+				.style('text-anchor', 'start'); // 设置文本锚点为开始位置
+
+			// 绘制图表后调整 y 轴标题位置
+			svg.selectAll('g.y.axis text.axis-title')
+				.attr('x', -25) // 将标题向左移动（x轴负方向）
+				.attr('y', -10) // 将标题向上移动（y轴负方向）
+				.style('text-anchor', 'end'); // 设置文本锚点为结束位置
+
+
+
+			document.getElementById("CountryMenu").onchange = function () {    // This is the event listener that runs when the user changes the menu
+				var x = document.getElementById("CountryMenu").value;
+				console.log(x);
+				SetCountryData(x);   // Run the function that will update chartdata with the user selected city
+
+				svg.selectAll(".dimple-marker,.dimple-marker-back").remove(); // There's a bug where it doesn't remove the markers from the previous series. 
+
+				myChart.data = chartdata; // Update the chart with the new chartdata
+				myChart.draw(300);
+			}
+		});
+
+		document.addEventListener('DOMContentLoaded', (event) => {
+			// 当页面加载完毕后绑定点击事件
+			document.getElementById('toggleButton').addEventListener('click', function () {
+				var layer = document.getElementById('layerToToggle');
+				if (layer.style.display === 'none' || layer.style.display === '') {
+					layer.style.display = 'block'; // 展开图层
+					this.textContent = 'Hide Line Charts'; // 更改按钮文本为“Hide Layer”
+				} else {
+					layer.style.display = 'none'; // 隐藏图层
+					this.textContent = 'Show Line Charts'; // 更改按钮文本为“Show Layer”
+				}
+			});
+		});
+
+
+		
+	</script>
+
+</body>
+
+</html>
