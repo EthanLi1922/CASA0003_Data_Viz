@@ -158,10 +158,12 @@
 				</tr>
 			</table>
 			<!-- Set inference and links -->
-			<p class="credit">Passenger data: <a href="https://ilostat.ilo.org/data/" target="_blank">ILOSTAT</a>.
+			<p class="credit">Data Sources:
+				<a href="https://ilostat.ilo.org/data/" target="_blank">ILOSTAT</a>;
+				<a href="https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/"
+					target="_blank">Natural Earth</a>
 				&nbsp;&nbsp;&nbsp;
-				Line and Station data: <a href="https://github.com/EthanLi1922/CASA0003_Data_Viz"
-					target="_blank">Yicong(Ethan) Li</a>,
+				Website Design: <a href="https://github.com/EthanLi1922/CASA0003_Data_Viz" target="_blank">Yicong(Ethan) Li</a>,
 				<a href="https://www.ucl.ac.uk/bartlett/casa" target="_blank">CASA</a>,
 				<a href="https://www.ucl.ac.uk/" target="_blank">UCL</a>.
 			</p>
@@ -178,8 +180,8 @@
 			<h4 id="charttitle">Country:</h4>
 			<p id="chartsubhead">Worldwide Unemployment Rate (15-24 years old)</p>
 			<p><select id="CountryMenu">
-				<option>Select the Country Here:</option>
-			</select></p> <!-- This is the drop down menu to select different cities-->
+					<option>Select the Country Here:</option>
+				</select></p> <!-- This is the drop down menu to select different cities-->
 		</div>
 	</div>
 
@@ -492,14 +494,14 @@
 
 
 			// This is the event listener that runs when the user changes the menu
-			document.getElementById("CountryMenu").onchange = function () {    
+			document.getElementById("CountryMenu").onchange = function () {
 				var x = document.getElementById("CountryMenu").value;
 				console.log(x);
 				SetCountryData(x);   // Run the function that will update chartdata with the user selected country
 				// There's a bug where it doesn't remove the markers from the previous series. 
-				svg.selectAll(".dimple-marker,.dimple-marker-back").remove(); 
+				svg.selectAll(".dimple-marker,.dimple-marker-back").remove();
 				// Update the chart with the new chartdata
-				myChart.data = chartdata; 
+				myChart.data = chartdata;
 				myChart.draw(300);
 			}
 		});
@@ -519,7 +521,7 @@
 		});
 
 
-		
+
 	</script>
 
 </body>
