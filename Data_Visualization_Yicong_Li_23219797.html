@@ -481,6 +481,9 @@
 			s.lineMarkers = true;
 			//s.interpolation = "cardinal";
 
+			// Draw the chart. The number is the animation delay in miliseconds
+			myChart.draw(500);
+
 			// Some minor stying changes using the svg selectAll statement. 
 			// Make the projected data a dashed line and the grid colour lighter.
 			svg.selectAll("path.dimple-proj").style("stroke-dasharray", "2");
@@ -488,8 +491,7 @@
 			svg.selectAll("path.domain").style("stroke", "#CCC");
 			svg.selectAll("g.tick line").style("stroke", "#CCC");
 
-			// Draw the chart. The number is the animation delay in miliseconds
-			myChart.draw(500);
+			
 
 
 
