@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Visualization of Worldwide Unemployment Rate</title>
+	<link rel="icon" type="image/png" href="ICON.png" />
+
+	<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+	<link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+	<script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+	<!-- 引入CSS文件 -->
+	<link href='Mapbox_styles.css' rel='stylesheet' />
+	<!--Load the chart libraries. Dimple is built on D3, and you need to also add D3-->
+	<script charset="utf-8" src="https://d3js.org/d3.v4.min.js"></script>
+	<script charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/dimple/2.3.0/dimple.latest.min.js"></script>
+
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+		}
+
+		a {
+			color: orange;
+			font-weight: bold;
+		}
+
+		#map {
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgb(210, 213, 213);
+			/* background: linear-gradient(to bottom, rgb(210, 213, 213) 50%, rgb(199, 199, 199) 50%); */
+		}
+
+		.hidden-layer {
+			position: fixed;
+			left: 0;
+			bottom: -10px;
+			display: none;
+			background-color: #f9f9f9;
+			border: 1px solid #ddd;
+			padding: 10px;
+			margin-top: 10px;
+		}
+
+		#toggleButton {
+			position: fixed;
+			top: 200px;
+			left: 0px;
+			width: 60px;
+			height: 440px;
+			/* font-weight: bold; */
+			background-color: rgb(156, 139, 126);
+			/* background-color: rgb(106, 99, 92); */
+			color: white;
+			border: none;
+			text-align: center;
+			line-height: 50px;
+			border-radius: 5px;
+			font-size: 16px;
+			font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+			cursor: pointer
+		}
+
+		#chartContainer {
+			position: fixed;
+			left: 60px;
+			top: 200px;
+			/* Ensure chartContainer is displayed above the map */
+			z-index: 10;
+			width: 700px;
+			border-radius: 10px;
+			background: white;
+			box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.3);
+			text-indent: 1em;
+			font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+		}
+
+		/* Chart style */
+		/* #chartContainer {width: 840px; margin: auto; margin-top: 50px; }
+        #chartContainer p {margin-left: 60px; margin-bottom: 5px; margin-top: 0; padding: 0;}
+        #charttitle {font: bold 22px  Verdana, sans-serif;} */
+
+		#charttitle {
+			font-size: 24px;
+			font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+			margin-bottom: 5px;
+			margin-top: 20px;
+			padding: 0;
+		}
+
+		#png {
+			position: absolute;
+			left: 0px;
+			bottom: 0px;
+			margin: 0px;
+			/* background: white; */
+			transform: scale(0.10);
+			transform-origin: left bottom;
+			left: 10px;
+		}
+	</style>
+
+</head>
+
+
+
+<body>
+	<div id="map"></div>
+
+	<!-- set a block on the left-top corner to show essential information -->
+	<div class='map-overlay top'>
+		<div class='map-overlay-inner'>
+			<h2>
+				Worldwide Unemployment Rate (15-24 years old)
+			</h2>
+			<table>
+				<tr>
+					<td>
+						<!-- <input> element, which creates a slider input box. -->
+						<input id='slider' type='range' min='0' max='25' step='1' value='0' list='tickmarks' />
+						<datalist id="tickmarks">
+							<option value="0" label="2000">
+							<option value="1">
+							<option value="2">
+							<option value="3">
+							<option value="4">
+							<option value="5" label="2005">
+							<option value="6">
+							<option value="7">
+							<option value="8">
+							<option value="9">
+							<option value="10" label="2010">
+							<option value="11">
+							<option value="12">
+							<option value="13">
+							<option value="14">
+							<option value="15" label="2015">
+							<option value="16">
+							<option value="17">
+							<option value="18">
+							<option value="19">
+							<option value="20" label="2020">
+							<option value="21">
+							<option value="22">
+							<option value="23">
+							<option value="24">
+							<option value="25" label="2025">
+						</datalist>
+					</td>
+					<td>
+						<label id='year'>2000</label>
+					</td>
+				</tr>
+			</table>
+			<!-- Set inference and links -->
+			<p class="credit">Passenger data: <a href="https://ilostat.ilo.org/data/" target="_blank">ILOSTAT</a>.
+				&nbsp;&nbsp;&nbsp;
+				Line and Station data: <a href="https://github.com/EthanLi1922/CASA0003_Data_Viz"
+					target="_blank">Yicong(Ethan) Li</a>,
+				<a href="https://www.ucl.ac.uk/bartlett/casa" target="_blank">CASA</a>,
+				<a href="https://www.ucl.ac.uk/" target="_blank">UCL</a>.
+			</p>
+		</div>
+	</div>
+
+	<!-- Set a button, to show line charts -->
+	<button id="toggleButton">
+		Show Line Charts
+	</button>
+	<!-- Seet the hidden-layer -->
+	<div class="hidden-layer" id="layerToToggle">
+		<div id="chartContainer">
+			<h4 id="charttitle">Country:</h4>
+			<p id="chartsubhead">Worldwide Unemployment Rate (15-24 years old)</p>
+			<p><select id="CountryMenu">
+				<option>Select the Country Here:</option>
+			</select></p> <!-- This is the drop down menu to select different cities-->
+		</div>
+	</div>
+
+	<!-- Add a colorbar in the left-bottom corner -->
+	<div id="png">
+		<img src="colorbar_test.png" alt="Rdbu_r colorbar">
+	</div>
+
+
+
+	<script>
+
+		// Add accessToken
+		mapboxgl.accessToken = 'pk.eyJ1IjoibHljMTk5OTExMTEiLCJhIjoiY2t0bjMzN2xkMmMwMzJ2cWZueXZzZHN0ZSJ9.BQGI-sCp3fhGZSD8NTeFtw';  //Put your mapbox access token here
+
+		// Load a new map in the 'map' HTML div
+		var map = new mapboxgl.Map({
+			container: 'map', // container id
+			style: 'mapbox://styles/lyc19991111/cltaoiowe00g501qn2m2ifij6', // Put your mapbox style ID here
+			center: [14, 28], // starting position [lng, lat]
+			zoom: 1.5,
+			minZoom: 1.5,
+			maxZoom: 8.0,
+			projection: 'equirectangular'
+		});
+
+		// Create an array of the available data years
+		var years = [
+			'2000', '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008', '2009',
+			'2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019',
+			'2020', '2021', '2022', '2023', '2024', '2025',
+		];
+
+		map.on('load', function () {
+
+			// Controll colored layer based on the year by slider 
+			// Add "EventListener" for slider
+			document.getElementById('slider').addEventListener('input', function (e) {
+				var yearIndex = parseInt(e.target.value); // Slider bar provides indexing of years
+				setYear(yearIndex); // Use "setYear" and pass the index of the year.
+			});
+
+			// Define the fillColorExpression here to make sure it's available when map.addLayer is called.
+			// The first part to be defined, the preset.
+			var fillColorExpression = [
+				'interpolate',
+				['linear'],
+				// This is an initial property that will be dynamically updated later in the "setYear" function.
+				['get', 'WUR2000'],
+				0, '#053061',
+				2, '#053061',
+				4, '#2065ab',
+				6, '#4393c3',
+				8, '#90c4dd',
+				10, '#d1e5f0',
+				12, '#f7f6f6',
+				14, '#f9ede5',
+				16, '#fbe3d4',
+				18, '#fcd7c2',
+				20, '#f9c4a9',
+				24, '#f09c7b',
+				28, '#da6853',
+				32, '#c13639',
+				36, '#9c1127',
+				40, '#67001f',
+				10000, '#c7c7c7'
+			];
+
+			// The second layer: colored layer
+			// Add a layer to display unemployment rate data in RdBu_r colorbar dynamically
+			// Check the order of layers with "map.getStyle().layers"
+			var layers = map.getStyle().layers;
+			var layerId;
+			for (var i = 0; i < layers.length; i++) {
+				if (layers[i].id === 'FINAL_DATASET') {
+					layerId = layers[i].id;
+					break;
+				}
+			}
+			// Add your new layer "WUR_display" below the "FINAL_DATASET" layer.
+			map.addLayer({
+				id: 'WUR_display',
+				type: 'fill',
+				source: {
+					type: 'vector',
+					url: 'mapbox://lyc19991111.5flmdelq'
+				},
+				'source-layer': 'Final_01-2qxwjk',
+				'layout': {
+					'visibility': 'visible'
+				},
+				'paint': {
+					'fill-color': fillColorExpression,
+					'fill-opacity': 1
+				}
+			}, layerId); // Specify the layer to be added under "FINAL_DATASET"
+
+			// Set value names before function
+			var dataProperty
+			var year
+			// Set the function to update the year
+			function setYear(yearIndex) {
+				// Get value "year"
+				year = years[yearIndex];
+				document.getElementById('year').textContent = year; // Updated "year" display
+				// Construct data attribute names based on the current year
+				dataProperty = 'WUR' + year;
+				// Build "fillColorExpression" to dynamically update the "fill-color" style.
+				var fillColorExpression = [
+					'interpolate',
+					['linear'],
+					['get', dataProperty], // Using Dynamic Property Names
+					// Rdbu_r colorbar
+					0, '#053061',
+					2, '#053061',
+					4, '#2065ab',
+					6, '#4393c3',
+					8, '#90c4dd',
+					10, '#d1e5f0',
+					12, '#f7f6f6',
+					14, '#f9ede5',
+					16, '#fbe3d4',
+					18, '#fcd7c2',
+					20, '#f9c4a9',
+					24, '#f09c7b',
+					28, '#da6853',
+					32, '#c13639',
+					36, '#9c1127',
+					40, '#67001f',
+					10000, '#c7c7c7'
+				];
+
+				// Update the code of "fillColorExpression"
+				map.setPaintProperty('WUR_display', 'fill-color', fillColorExpression);
+
+			}
+
+
+
+
+			// The third layer: a little white block to show the realtime data
+			var currentYear = '2000'; // initializate Year in "currentYear"
+			var dataProperty = 'WUR' + currentYear; // initializate "dataProperty"
+
+			// When the user changes the year, this function needs to be called to update the "dataProperty"
+			function updateDataProperty(year) {
+				currentYear = year; // Update current year
+				dataProperty = 'WUR' + year; // Update property names "dataProperty" based on current year
+			}
+
+			// Another "EventListener" that adds the popup when the user puts their cursor over the colored layer
+			var mypopup = new mapboxgl.Popup({
+				offset: [150, 50],
+				closeButton: false,
+				closeOnClick: false
+			});
+
+			map.on('mousemove', 'WUR_display', function (e) {
+				// Change the cursor to a pointer when the mouse is over the layer "WUR_display"
+				map.getCanvas().style.cursor = 'pointer';
+
+				// Set the values name before the function
+				var checknumber = e.features[0].properties[dataProperty];
+				var contentHTML;
+
+				// Use "if" function to decide whether the data is available
+				if (checknumber === 10000) {
+					contentHTML = "<h3>" + e.features[0].properties.country + "</h3>Data is unavailable";
+				}
+				// Otherwise, show the actual unemployment rate
+				else {
+					contentHTML = "<h3>" + e.features[0].properties.country + "</h3>Unemployment Rate: " + checknumber.toFixed(2) + "%";
+				}
+
+				mypopup
+					.setLngLat(e.lngLat)
+					.setHTML(contentHTML)
+					.addTo(map);
+			});
+
+			// Change it back to a pointer when it leaves and remove the popup window.
+			map.on('mouseleave', 'WUR_display', function (e) {
+				map.getCanvas().style.cursor = '';
+				mypopup.remove();
+			});
+
+		}); // The enf of "map.on('load', function ())""
+
+
+
+
+
+		// The hidden layer: Line charts
+
+		//This statement loads the data from the CSV file, and then runs the function after the CSV is loaded. 
+		// CountryData is an array that contains the CSV data
+		d3.csv("csv_final.csv", function (CountryData) {
+
+			var chartdata;
+			var countryMenu = document.getElementById("CountryMenu");
+
+			// This is a loop that iterates over each element in the "CountryData" array.
+			// In this loop we add the names of all the Countries in the CSV to the drop down menu
+			for (var i = 0; i < CountryData.length; i++) {
+				var el = document.createElement("option");
+				el.textContent = CountryData[i].country;
+				el.value = CountryData[i].Index;
+				countryMenu.appendChild(el);
+			}
+
+			// This is a function definition where SetCountryData receives an argument index.
+			// This index is expected to be an integer that specifies a particular element in the CountryData array.
+			function SetCountryData(index) {
+				// This is just a console
+				console.log(CountryData[index]); // Show the data of the row in the console
+
+				document.getElementById("charttitle").innerHTML = "Country/Region: " + CountryData[index].country; // The name of the country is inserted into the chart title
+
+				// Dimple requires each data point on a time series to be a separate row. 
+				// Below we insert data from the CountryData array into a new array of JSON objects in the required format
+				chartdata = [
+					{ "Country": "Hist", "Year": "2000", "WUR": (CountryData[index].WUR2000) },
+					{ "Country": "Hist", "Year": "2001", "WUR": (CountryData[index].WUR2001) },
+					{ "Country": "Hist", "Year": "2002", "WUR": (CountryData[index].WUR2002) },
+					{ "Country": "Hist", "Year": "2003", "WUR": (CountryData[index].WUR2003) },
+					{ "Country": "Hist", "Year": "2004", "WUR": (CountryData[index].WUR2004) },
+					{ "Country": "Hist", "Year": "2005", "WUR": (CountryData[index].WUR2005) },
+					{ "Country": "Hist", "Year": "2006", "WUR": (CountryData[index].WUR2006) },
+					{ "Country": "Hist", "Year": "2007", "WUR": (CountryData[index].WUR2007) },
+					{ "Country": "Hist", "Year": "2008", "WUR": (CountryData[index].WUR2008) },
+					{ "Country": "Hist", "Year": "2009", "WUR": (CountryData[index].WUR2009) },
+					{ "Country": "Hist", "Year": "2010", "WUR": (CountryData[index].WUR2010) },
+					{ "Country": "Hist", "Year": "2011", "WUR": (CountryData[index].WUR2011) },
+					{ "Country": "Hist", "Year": "2012", "WUR": (CountryData[index].WUR2012) },
+					{ "Country": "Hist", "Year": "2013", "WUR": (CountryData[index].WUR2013) },
+					{ "Country": "Hist", "Year": "2014", "WUR": (CountryData[index].WUR2014) },
+					{ "Country": "Hist", "Year": "2015", "WUR": (CountryData[index].WUR2015) },
+					{ "Country": "Hist", "Year": "2016", "WUR": (CountryData[index].WUR2016) },
+					{ "Country": "Hist", "Year": "2017", "WUR": (CountryData[index].WUR2017) },
+					{ "Country": "Hist", "Year": "2018", "WUR": (CountryData[index].WUR2018) },
+					{ "Country": "Hist", "Year": "2019", "WUR": (CountryData[index].WUR2019) },
+					{ "Country": "Hist", "Year": "2020", "WUR": (CountryData[index].WUR2020) },
+					{ "Country": "Hist", "Year": "2021", "WUR": (CountryData[index].WUR2021) },
+					{ "Country": "Hist", "Year": "2022", "WUR": (CountryData[index].WUR2022) },
+					{ "Country": "Proj", "Year": "2022", "WUR": (CountryData[index].WUR2022) },
+					{ "Country": "Proj", "Year": "2023", "WUR": (CountryData[index].WUR2023) },
+					{ "Country": "Proj", "Year": "2024", "WUR": (CountryData[index].WUR2024) },
+					{ "Country": "Proj", "Year": "2025", "WUR": (CountryData[index].WUR2025) },
+				];
+			}
+
+			// Set an initial value
+			SetCountryData(0);
+
+
+
+			// Draw line charts!!!
+			// Create an SVG element and attach it inside the element with id "chartContainer" on the page	
+			var svg = dimple.newSvg("#chartContainer", 800, 300);
+			// Create the chart
+			var myChart = new dimple.chart(svg, chartdata);
+			// Set the chart bounds within the svg container
+			myChart.setBounds(70, 15, 580, 200);
+			// Sets the default colour of the chart. 
+			myChart.defaultColors = [
+				new dimple.color("#54aae3"),
+				new dimple.color("#54aae3")
+			];
+
+			// Define the x axis. The latter statements define the date format which we want to be year only
+			var x = myChart.addTimeAxis("x", "Year", "%Y", "%Y");
+			// 设置时间轴的间隔。这里设置为每1年显示一次标记。
+			x.timeInterval = 1;
+
+			// Define the y axis.
+			var y = myChart.addMeasureAxis("y", "WUR");
+			y.overrideMin = 0;   // Setting the min value of the y-axis
+			y.overrideMax = 50;   // Setting the max value of the y-axis
+			y.tickFormat = ",.2f";   // Set the format of the y-axis scale (.2f)
+			y.ticks = 10;   // Set the number of scales for the y-axis.
+			y.title = "Unemployment Rate (%)";  // 设置y轴的标题
+
+			// Adjusting the x-axis and y-axis title position after plotting the chart
+			svg.selectAll('g.x.axis text.axis-title')
+				.attr('y', 100)
+				.attr('x', 10)
+				.style('text-anchor', 'start');
+			svg.selectAll('g.y.axis text.axis-title')
+				.style('font-size', '80px')
+				.attr('x', -25)
+				.attr('y', -10)
+				.style('text-anchor', 'end');
+
+			// Add a series, specify the "Country" column as the series category, and set the chart type to Line.
+			// This means that the chart will show data for different countries as different lines.
+			var s = myChart.addSeries("Country", dimple.plot.line);
+			s.lineMarkers = true;
+			//s.interpolation = "cardinal";
+
+			// Some minor stying changes using the svg selectAll statement. 
+			// Make the projected data a dashed line and the grid colour lighter.
+			svg.selectAll("path.dimple-proj").style("stroke-dasharray", "2");
+			// The axis (path.domain) and tick line (g.tick line) colours are set to light grey.
+			svg.selectAll("path.domain").style("stroke", "#CCC");
+			svg.selectAll("g.tick line").style("stroke", "#CCC");
+
+			// Draw the chart. The number is the animation delay in miliseconds
+			myChart.draw(500);
+
+
+
+			// This is the event listener that runs when the user changes the menu
+			document.getElementById("CountryMenu").onchange = function () {    
+				var x = document.getElementById("CountryMenu").value;
+				console.log(x);
+				SetCountryData(x);   // Run the function that will update chartdata with the user selected country
+				// There's a bug where it doesn't remove the markers from the previous series. 
+				svg.selectAll(".dimple-marker,.dimple-marker-back").remove(); 
+				// Update the chart with the new chartdata
+				myChart.data = chartdata; 
+				myChart.draw(300);
+			}
+		});
+
+		document.addEventListener('DOMContentLoaded', (event) => {
+			// Bind the click event when the page is loaded.
+			document.getElementById('toggleButton').addEventListener('click', function () {
+				var layer = document.getElementById('layerToToggle');
+				if (layer.style.display === 'none' || layer.style.display === '') {
+					layer.style.display = 'block'; // show the line charts
+					this.textContent = 'Hide Line Charts'; // Change the button text to "Hide Layer".
+				} else {
+					layer.style.display = 'none'; // hide the line charts
+					this.textContent = 'Show Line Charts'; // Change the button text to "Show Layer".
+				}
+			});
+		});
+
+
+		
+	</script>
+
+</body>
+
+</html>
